@@ -23,25 +23,24 @@ DATA_PROCESS_CLASS = {
 }
 
 MODEL_CLASS = {
-    'bert-vit-inter-re': BertVitInterReModel,
-    'bert': BertForMultiLabelEntityClassification
+    'HvFormer': BertVitInterReModel,
+    'HVPNet': HVPNetModel,
+    'bert': BertForMultiLabelEntityClassification,
+    'MEGA': MEGA,
+    'MKGformer': MKGformer,
+
 }
 
 DATA_PATH = {
-    'mnre': {'train': 'train.json',
+    'm2re': {'train': 'train.json',
              'dev': 'val.json',
              'test': 'test.json',
-             # 'train_auximgs': '../data/RE_data/txt/mre_train_dict.pth',  # {data_id : object_crop_img_path}
-             # 'dev_auximgs': '../data/RE_data/txt/mre_dev_dict.pth',
-             # 'test_auximgs': '../data/RE_data/txt/mre_test_dict.pth',
-             # 'train_img2crop': '../data/RE_data/img_detect/train/train_img2crop.pth',
-             # 'dev_img2crop': '../data/RE_data/img_detect/val/val_img2crop.pth',
-             # 'test_img2crop': '../data/RE_data/img_detect/test/test_img2crop.pth'
+
              },
 }
 
 IMG_PATH = {
-    'mnre': {'train': '../mmdataset/dataset',
+    'm2re': {'train': '../mmdataset/dataset',
              'dev': '../mmdataset/dataset',
              'test': '../mmdataset/dataset'},
 }
@@ -52,7 +51,6 @@ AUX_PATH = {
         'test': None
     },
 }
-
 
 def set_seed(seed=2022):
     """set random seed"""
@@ -82,76 +80,6 @@ def load_previous_labeled_ids(current_round, last_round_logging_path):
 
 
 
-def query(query_budget, model, strategy, current_round,
-          initial_query_budget, datamodule,task_model_logging_path, logging_path):
-    unlabeled_ids = datamodule.unlabeled_ids
-    query_budget = query_budget if len(unlabeled_ids) >= query_budget else len(unlabeled_ids)
-    print(f"query budget set to {query_budget}")
-    if query_budget == 0:
-        raise ValueError("All unlabeled datas are labeled")
-    # query
-    if current_round == 0 or len(unlabeled_ids) <= query_budget:
-        query_start_time = time.time()
-        sampling_method = RandomSampling(datamodule.unlabeled_ids)
-        query_ids = sampling_method.query(initial_query_budget)
-    else:
-        # create dataloader for querying
-        query_dataloader = datamodule.unlabeled_dataloader()
-        prediction_trainer = BertVitReTrainer(train_data=query_dataloader, dev_data=None, test_data=None,
-                         re_dict=None, model=model, args=args, logger=logger, writer=None)
-
-        # predict features and logits for querying
-        mm_probs, z1, z2, contribution_m1, contribution_m2 = prediction_trainer.predict(
-            dataloaders=query_dataloader,
-            ckpt_path=str(task_model_logging_path)
-        )
-
-        # querying
-        query_start_time = time.time()
-        if strategy == "entropy":
-            sampling_method = EntropySampling(unlabeled_ids, multilabel=False)
-            query_ids = sampling_method.query(query_budget, mm_probs)
-
-        elif strategy == "bmmal":
-            contribution_m1 = contribution_m1.gather(1, torch.argmax(mm_probs, dim=-1, keepdim=True))
-            contribution_m2 = contribution_m2.gather(1, torch.argmax(mm_probs, dim=-1, keepdim=True))
-
-            m1_strong_mask = contribution_m1 > contribution_m2
-            m2_strong_mask = contribution_m2 >= contribution_m1
-
-            scale_m1 = torch.empty_like(contribution_m1)
-            scale_m2 = torch.empty_like(contribution_m2)
-
-            scale_m1[m1_strong_mask] = 1
-            scale_m1[m2_strong_mask] = 1 - (contribution_m2[m2_strong_mask] - contribution_m1[m2_strong_mask])
-
-            scale_m2[m2_strong_mask] = 1
-            scale_m2[m1_strong_mask] = 1 - (contribution_m1[m1_strong_mask] - contribution_m2[m1_strong_mask])
-
-
-            sampling_method = BMMAL(unlabeled_ids,
-                                    device='cuda:0')
-            query_ids = sampling_method.query(
-                n=query_budget, unimodal_z=[z1, z2],
-                unimodal_probs=[mm_probs, mm_probs],
-                unimodal_contributions=[scale_m1, scale_m2],
-                num_classes=23,
-                mm_probs=mm_probs,
-                multilabel=False)
-        else:
-            raise NotImplemented
-
-    query_end_time = time.time()
-    logging_path_for_topk = logging_path / "topk"
-    save_label_ids(query_ids, path=logging_path_for_topk)
-    # add queried ids to labeled pool
-    datamodule.query_for_label(query_ids)
-
-    labeled_ids = datamodule.labeled_ids
-
-    save_label_ids(labeled_ids, path=logging_path)
-
-    return query_end_time - query_start_time
 
 def get_logger(args):
     if args.do_test:
@@ -249,47 +177,26 @@ def init_and_train_bert_vit_re(args, logger):
                                  aux_processor=aux_processor, rcnn_processor=rcnn_processor)
 
 
-        # train_dataset = dataset_class(processor, transform, img_path, aux_path, args.max_seq, aux_size=args.aux_size,
-        #                               rcnn_size=args.rcnn_size, mode='train',)
-        # train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
-        #                               num_workers=args.num_workers,
-        #                               pin_memory=True)
-        #
-        # dev_dataset = dataset_class(processor, transform, img_path, aux_path, args.max_seq, aux_size=args.aux_size,
-        #                             rcnn_size=args.rcnn_size, mode='dev')
-        # dev_dataloader = DataLoader(dev_dataset, batch_size=args.batch_size, shuffle=False,
-        #                             num_workers=args.num_workers,
-        #                             pin_memory=True)
-        #
-        # test_dataset = dataset_class(processor, transform, img_path, aux_path, args.max_seq, aux_size=args.aux_size,
-        #                              rcnn_size=args.rcnn_size, mode='test', write_path=args.write_path,
-        #                              do_test=args.do_test)
-        # test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,
-        #                              num_workers=args.num_workers,
-        #                              pin_memory=True)
+        train_dataset = dataset_class(processor, transform, img_path, aux_path, args.max_seq, aux_size=args.aux_size,
+                                      rcnn_size=args.rcnn_size, mode='train',)
+        train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                                      num_workers=args.num_workers,
+                                      pin_memory=True)
+        
+        dev_dataset = dataset_class(processor, transform, img_path, aux_path, args.max_seq, aux_size=args.aux_size,
+                                    rcnn_size=args.rcnn_size, mode='dev')
+        dev_dataloader = DataLoader(dev_dataset, batch_size=args.batch_size, shuffle=False,
+                                    num_workers=args.num_workers,
+                                    pin_memory=True)
+        
+        test_dataset = dataset_class(processor, transform, img_path, aux_path, args.max_seq, aux_size=args.aux_size,
+                                     rcnn_size=args.rcnn_size, mode='test', write_path=args.write_path,
+                                     do_test=args.do_test)
+        test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,
+                                     num_workers=args.num_workers,
+                                     pin_memory=True)
 
-        # Datamodule setup for AL training 9.12
-        current_round = args.current_round
-        initial_query_budget = args.initial_query_budget
-        query_budget = args.query_budget
-        logging_root_dir = pathlib.Path(args.logging_root_dir)
-        logging_path = logging_root_dir / f"version_{current_round}"
-        last_round_logging_path = logging_root_dir / f"version_{current_round - 1}"
-        task_model_logging_path = './ckpt/ta'
-        each_round_task_model_logging_path = logging_path / "ckpt" / "task_model"
-
-        datamodule = MultiModalDataModule(processor, img_path, aux_path, args.max_seq, aux_size=args.aux_size,
-                                          root_dir='../HVPNeT-main/data/RE_data/txt',
-                                          #root_dir='./data/',
-                                          rcnn_size=args.rcnn_size,
-                                          batch_size=args.batch_size,
-                                          num_workers=args.num_workers,write_path=args.write_path, do_test=args.do_test)
-        previous_labeled_ids = load_previous_labeled_ids(current_round, last_round_logging_path)
-        if current_round != 0:
-            assert len(previous_labeled_ids) == query_budget * (
-                    current_round - 1) + initial_query_budget, "Error when loading labeled ids"
-        datamodule.train_dataset.query_for_label(previous_labeled_ids)  # add previous labeled ids into datapool
-
+        
 
         re_dict = processor.get_relation_dict()
         tokenizer = processor.tokenizer  # 30526 tokens, be used to convert textual tokens to ids
@@ -308,20 +215,18 @@ def init_and_train_bert_vit_re(args, logger):
                             clip_model_dict=clip_model_dict,
                             bert_model_dict=text_model_dict, )
 
-        # AL query 9.12
-        strategy = "entropy"
-        query_time = query(query_budget, model, strategy, current_round,
-           initial_query_budget, datamodule, task_model_logging_path, logging_path)
-
-        train_dataloader = datamodule.train_dataloader()
-        dev_dataloader = datamodule.val_dataloader()
-        test_dataloader = datamodule.test_dataloader()
-
         trainer = BertVitReTrainer(train_data=train_dataloader, dev_data=dev_dataloader, test_data=test_dataloader,
                                    re_dict=re_dict, model=model, args=args, logger=logger, writer=None)
-
         trainer.train()
 
+def init_and_train_hvpnet(args, logger):
+    pass
+
+def init_and_train_mega(args, logger):
+    pass
+
+def init_and_train_mkgformer(args, logger):
+    pass
 
 if __name__ == "__main__":
     args = parse_argument()
@@ -330,8 +235,10 @@ if __name__ == "__main__":
     logger.info(args)
     try:
         TRAINER = {
-            'bert-vit-inter-re': init_and_train_bert_vit_re,
-            'bert': init_and_train_bert_vit_re
+            'HvFormer': init_and_train_bert_vit_re,
+            'HVPNet': init_and_train_hvpnet,
+            'MEGA': init_and_train_mega,
+            'MKGformer': init_and_train_mkgformer,
         }
         if args.model_name in TRAINER.keys():
             TRAINER[args.model_name](args, logger)
