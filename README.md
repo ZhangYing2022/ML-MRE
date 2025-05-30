@@ -29,20 +29,18 @@ The dataset can be obtained in [Google Drive](https://drive.google.com/drive/fol
 
 
 ## 🚀 Getting Started
-
+1. Clone the repo
 ```bash
 git clone https://github.com/your-username/ml-mre.git
+```
+```bash
+2. Install the envs
 cd ml-mre
 pip install -r requirements.txt
+```
+3. Train
+```bash
 bash scripts/train_hvformer.sh
 ```
 
-## Cite
-```bash
-@inproceedings{your2024mlmre,
-  title={ML-MRE: A Multi-Label Multimodal Relation Extraction Benchmark},
-  author={Your, Name and Others},
-  booktitle={Proceedings of XYZ Conference},
-  year={2024}
-}
-```
+
