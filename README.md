@@ -5,8 +5,8 @@ This repository provides the **M2RE dataset** and baseline implementations for t
 ## 🔍 Overview
 
 ML-MRE is a benchmark designed to reflect the complexity and ambiguity of real-world image-text pairs. Unlike prior MRE datasets that assume one relation per entity pair or focus on unimodal inputs, ML-MRE supports:
-- **Multi-label relations per entity pair**
-- **Multimodal input reasoning (text + image)**
+- Multi-label relations per entity pair
+- Multimodal input reasoning (text + image)
 - Fine-grained relation semantics across 24 relation types
 
 ## 📂 Repository Structure
@@ -14,8 +14,9 @@ ML-MRE is a benchmark designed to reflect the complexity and ambiguity of real-w
 .
 ├── data/ # Processed data files (JSON format)
 ├── models/ # Baseline models and configurations
-├── scripts/ # Training, evaluation, and preprocessing scripts
-├── results/ # Sample output logs or prediction results
+├── processor/ # Preprocessing scripts
+├── trainer/ # Training
+├── run.py
 └── README.md
 ```
 
