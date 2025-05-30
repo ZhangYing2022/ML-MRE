@@ -21,7 +21,7 @@ ML-MRE is a benchmark designed to reflect the complexity and ambiguity of real-w
 
 ## 📦 Dataset
 
-The dataset can be obtained in https://drive.google.com/drive/folders/1wgaydIUgMine0WWF4xxaWE-p_QqdTEBV?usp=sharing, it is constructed from news-style image-text pairs, with human-verified annotations. Each sample contains:
+The dataset can be obtained in [Google Drive]https://drive.google.com/drive/folders/1wgaydIUgMine0WWF4xxaWE-p_QqdTEBV?usp=sharing, it is constructed from news-style image-text pairs, with human-verified annotations. Each sample contains:
 - A news article (caption/sentence)
 - A corresponding image
 - Entity pair
