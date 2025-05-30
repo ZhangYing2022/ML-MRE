@@ -33,8 +33,8 @@ The dataset can be obtained in [Google Drive](https://drive.google.com/drive/fol
 ```bash
 git clone https://github.com/your-username/ml-mre.git
 ```
+2. Install the environment
 ```bash
-2. Install the envs
 cd ml-mre
 pip install -r requirements.txt
 ```
