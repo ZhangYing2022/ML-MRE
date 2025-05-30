@@ -32,11 +32,11 @@ The dataset can be obtained in [Google Drive](https://drive.google.com/drive/fol
 ## 🚀 Getting Started
 1. Clone the repo
 ```bash
-git clone https://github.com/your-username/ml-mre.git
+git clone https://github.com/ZhangYing2022/ML-MRE.git
 ```
 2. Install the environment
 ```bash
-cd ml-mre
+cd ML-MRE
 pip install -r requirements.txt
 ```
 3. Train
