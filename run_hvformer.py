@@ -9,8 +9,7 @@ from transformers import BertConfig, CLIPConfig, BertModel
 from transformers.models.clip import CLIPProcessor
 from models import *
 from processor import *
-from schedulers import *
-from strategy import *
+from trainer import *
 
 sys.path.append("..")
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -24,11 +23,7 @@ DATA_PROCESS_CLASS = {
 
 MODEL_CLASS = {
     'HvFormer': BertVitInterReModel,
-    'HVPNet': HVPNetModel,
     'bert': BertForMultiLabelEntityClassification,
-    'MEGA': MEGA,
-    'MKGformer': MKGformer,
-
 }
 
 DATA_PATH = {
@@ -110,9 +105,9 @@ def get_logger(args):
 def parse_argument():
     parser = argparse.ArgumentParser()
     parser.add_argument('--experiment_name', default='test', type=str, help="The name of current experiment.")
-    parser.add_argument('--model_name', default='bert-vit-inter-re', type=str, help="The name of bert.")
+    parser.add_argument('--model_name', default='HvFormer', type=str, help="The name of bert.")
     parser.add_argument('--vit_name', default='../dataset/clip-vit-base-patch32', type=str, help="The name of vit.")
-    parser.add_argument('--dataset_name', default='mnre', type=str, help="The name of dataset.")
+    parser.add_argument('--dataset_name', default='m2re', type=str, help="The name of dataset.")
     parser.add_argument('--bert_name', default='../dataset/bert-base-uncased', type=str,
                         help="Pretrained language model name, bart-base or bart-large")
     parser.add_argument('--num_epochs', default=20, type=int, help="Training epochs")
@@ -219,14 +214,6 @@ def init_and_train_bert_vit_re(args, logger):
                                    re_dict=re_dict, model=model, args=args, logger=logger, writer=None)
         trainer.train()
 
-def init_and_train_hvpnet(args, logger):
-    pass
-
-def init_and_train_mega(args, logger):
-    pass
-
-def init_and_train_mkgformer(args, logger):
-    pass
 
 if __name__ == "__main__":
     args = parse_argument()
@@ -236,9 +223,6 @@ if __name__ == "__main__":
     try:
         TRAINER = {
             'HvFormer': init_and_train_bert_vit_re,
-            'HVPNet': init_and_train_hvpnet,
-            'MEGA': init_and_train_mega,
-            'MKGformer': init_and_train_mkgformer,
         }
         if args.model_name in TRAINER.keys():
             TRAINER[args.model_name](args, logger)
