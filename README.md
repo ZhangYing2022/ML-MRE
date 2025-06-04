@@ -41,7 +41,7 @@ pip install -r requirements.txt
 ```
 3. Train
 ```bash
-bash scripts/train_hvformer.sh
+python train_hvformer.py
 ```
 
 
